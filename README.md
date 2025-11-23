@@ -1,12 +1,12 @@
-🦸‍♂️ SuperHero Manager
+#🦸‍♂️ SuperHero Manager
 
 Une application Full-Stack pour gérer une base de données de super-héros, développée avec la stack MERN (MongoDB, Express, React, Node.js) et TypeScript.
 
-🛠️ Installation et Démarrage
+#🛠️ Installation et Démarrage
 
 Prérequis : Node.js et MongoDB installés sur votre machine.
 
-1. Installation des dépendances
+# 1. Installation des dépendances
 
 À la racine du projet, installez les dépendances pour le backend et le frontend :
 
@@ -22,7 +22,7 @@ cd ../frontend
 npm install
 ```
 
-2. Configuration
+# 2. Configuration
 
 Créez un fichier .env dans le dossier backend/ avec les variables suivantes :
 ```
@@ -31,7 +31,7 @@ MONGO_URI=mongodb://localhost:27017/superheromanager
 JWT_SECRET=votre_super_secret_jwt
 ```
 
-3. Importation des Données (Seed)
+# 3. Importation des Données (Seed)
 
 Pour remplir la base de données avec les 500+ héros initiaux :
 
@@ -40,7 +40,7 @@ Pour remplir la base de données avec les 500+ héros initiaux :
 npx ts-node src/utils/seedDatabase.ts
 ```
 
-4. Lancement du projet
+# 4. Lancement du projet
 
 Il faut lancer le backend et le frontend dans deux terminaux séparés.
 
