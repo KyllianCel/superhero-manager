@@ -1,0 +1,275 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useParams } from 'react-router-dom';
+import { Formik, Form, Field, ErrorMessage, type FieldProps } from 'formik';
+import * as Yup from 'yup';
+import { getHeroById, updateHero } from '../api/heroApi';
+import type { Hero } from '../types/Hero';
+
+// --- 1. Schéma de validation ---
+const validationSchema = Yup.object({
+  name: Yup.string().required('Le nom est requis'),
+  univers: Yup.string().required("L'univers est requis"),
+  image: Yup.mixed().nullable().optional(),
+  biography: Yup.object({
+    fullName: Yup.string(),
+    placeOfBirth: Yup.string(),
+  }),
+  appearance: Yup.object({
+    gender: Yup.string(),
+    race: Yup.string(),
+  }),
+  work: Yup.object({
+    occupation: Yup.string(),
+  }),
+  connections: Yup.object({
+    groupAffiliation: Yup.string(),
+  }),
+  powerstats: Yup.object({
+    intelligence: Yup.number().min(0).max(100),
+    strength: Yup.number().min(0).max(100),
+    speed: Yup.number().min(0).max(100),
+    durability: Yup.number().min(0).max(100),
+    power: Yup.number().min(0).max(100),
+    combat: Yup.number().min(0).max(100),
+  }),
+});
+
+// --- 2. Type pour les valeurs du formulaire ---
+interface FormValues {
+  name: string;
+  univers: string;
+  image: File | null;
+  biography: {
+    fullName: string;
+    placeOfBirth: string;
+  };
+  appearance: {
+    gender: string;
+    race: string;
+  };
+  work: {
+    occupation: string;
+  };
+  connections: {
+    groupAffiliation: string;
+  };
+  powerstats: {
+    intelligence: number;
+    strength: number;
+    speed: number;
+    durability: number;
+    power: number;
+    combat: number;
+  };
+}
+
+// --- Composants utilitaires pour le formulaire ---
+const FormSection = ({ title, children }: { title: string, children: React.ReactNode }) => (
+  <fieldset className="border border-gray-300 p-4 rounded-md">
+    <legend className="text-xl font-semibold px-2">{title}</legend>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {children}
+    </div>
+  </fieldset>
+);
+
+const TextInput = ({ field, label }: FieldProps & { label: string }) => (
+  <div>
+    <label htmlFor={field.name} className="block text-sm font-medium text-gray-700">
+      {label}
+    </label>
+    <Field
+      {...field}
+      type="text"
+      id={field.name}
+      className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+    />
+  </div>
+);
+
+const StatInput = ({ field, ...props }: FieldProps) => (
+  <div>
+    <label htmlFor={field.name} className="block text-sm font-medium text-gray-700 capitalize">
+      {field.name.split('.')[1]}
+    </label>
+    <Field
+      {...field}
+      {...props}
+      type="number"
+      id={field.name}
+      className="mt-1 block w-full border border-gray-300 rounded-md p-2 text-sm"
+      min="0"
+      max="100"
+    />
+  </div>
+);
+
+// --- Composant principal EditHero ---
+const EditHero = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [serverError, setServerError] = useState('');
+  
+  const defaultHeroShape: FormValues = {
+    name: '',
+    univers: 'Autre',
+    image: null,
+    biography: { fullName: '', placeOfBirth: '' },
+    appearance: { gender: 'Male', race: '' },
+    work: { occupation: '' },
+    connections: { groupAffiliation: '' },
+    powerstats: { intelligence: 0, strength: 0, speed: 0, durability: 0, power: 0, combat: 0 },
+  };
+
+  const [initialValues, setInitialValues] = useState<FormValues | null>(null);
+
+  // --- Charger les données du héros au montage ---
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchHero = async () => {
+      try {
+        const heroData: Hero = await getHeroById(id);
+        
+        // Fusionne les données par défaut avec les données de la BDD
+        setInitialValues({
+          ...defaultHeroShape,
+          ...heroData,
+          name: heroData.name,
+          univers: heroData.biography?.publisher || 'Autre',
+          image: null,
+          biography: { ...defaultHeroShape.biography, ...heroData.biography },
+          appearance: { ...defaultHeroShape.appearance, ...heroData.appearance },
+          work: { ...defaultHeroShape.work, ...heroData.work },
+          connections: { ...defaultHeroShape.connections, ...heroData.connections },
+          powerstats: { ...defaultHeroShape.powerstats, ...heroData.powerstats },
+        });
+
+      } catch (error) {
+        console.error("Erreur de chargement:", error);
+        setServerError("Impossible de charger les données du héros.");
+      }
+    };
+    fetchHero();
+  }, [id]);
+
+  // --- HandleSubmit mis à jour pour 'update' ---
+  const handleSubmit = async (values: FormValues) => {
+    if (!id) return;
+
+    const formData = new FormData();
+    formData.append('name', values.name);
+    formData.append('univers', values.univers);
+    
+    if (values.image) {
+      formData.append('image', values.image);
+    }
+
+    const bio = { ...values.biography, publisher: values.univers };
+    formData.append('biography', JSON.stringify(bio));
+    formData.append('powerstats', JSON.stringify(values.powerstats));
+    formData.append('appearance', JSON.stringify(values.appearance));
+    formData.append('work', JSON.stringify(values.work));
+    formData.append('connections', JSON.stringify(values.connections));
+
+    try {
+      await updateHero(id, formData);
+      navigate(`/hero/${id}`);
+    } catch (error: any)
+       {
+      console.error('Erreur lors de la mise à jour:', error);
+      setServerError(error.response?.data?.message || 'Une erreur est survenue');
+    }
+  };
+
+  if (!initialValues) {
+    return <div className="text-center mt-10 text-xl">Chargement du formulaire...</div>;
+  }
+
+  return (
+    <div className="container mx-auto p-6 max-w-4xl">
+      <Link to={`/hero/${id || '/'}`} className="text-blue-500 hover:underline mb-4 inline-block">&larr; Annuler</Link>
+      <h1 className="text-3xl font-bold mb-6">Modifier {initialValues.name}</h1>
+      <Formik
+        initialValues={initialValues}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+        enableReinitialize
+      >
+        {({ setFieldValue, isSubmitting }) => (
+          <Form className="bg-white p-6 rounded-lg shadow-md space-y-6">
+
+            <FormSection title="Informations Principales">
+              <div>
+                <label htmlFor="name" className="block font-medium text-gray-700">Nom du Héros</label>
+                <Field id="name" name="name" type="text" className="mt-1 block w-full border border-gray-300 rounded-md p-2" />
+                <ErrorMessage name="name" component="div" className="text-red-500 text-sm" />
+              </div>
+              <div>
+                <label htmlFor="univers" className="block font-medium text-gray-700">Univers</label>
+                <Field as="select" id="univers" name="univers" className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-white">
+                  <option value="Autre">Autre</option>
+                  <option value="Marvel">Marvel</option>
+                  <option value="DC">DC</option>
+                </Field>
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="image" className="block font-medium text-gray-700">Changer l'image (optionnel)</label>
+                <input
+                  id="image" name="image" type="file" accept="image/*"
+                  onChange={(event) => {
+                    setFieldValue("image", event.currentTarget.files ? event.currentTarget.files[0] : null);
+                  }}
+                  className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <ErrorMessage name="image" component="div" className="text-red-500 text-sm" />
+              </div>
+            </FormSection>
+
+            <FormSection title="Biographie">
+              <Field name="biography.fullName" label="Nom complet (civil)" component={TextInput} />
+              <Field name="biography.placeOfBirth" label="Lieu de naissance" component={TextInput} />
+            </FormSection>
+
+            <FormSection title="Apparence">
+              <div>
+                <label htmlFor="appearance.gender" className="block font-medium text-gray-700">Genre</label>
+                <Field as="select" id="appearance.gender" name="appearance.gender" className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-white">
+                  <option value="Male">Homme</option>
+                  <option value="Female">Femme</option>
+                  <option value="Other">Autre</option>
+                </Field>
+              </div>
+              <Field name="appearance.race" label="Race" component={TextInput} />
+            </FormSection>
+
+            <FormSection title="Travail & Connexions">
+              <Field name="work.occupation" label="Occupation" component={TextInput} />
+              <Field name="connections.groupAffiliation" label="Affiliation (Groupe)" component={TextInput} />
+            </FormSection>
+
+            <fieldset className="border border-gray-300 p-4 rounded-md">
+              <legend className="text-xl font-semibold px-2">Statistiques de puissance</legend>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <Field name="powerstats.intelligence" component={StatInput} />
+                <Field name="powerstats.strength" component={StatInput} />
+                <Field name="powerstats.speed" component={StatInput} />
+                <Field name="powerstats.durability" component={StatInput} />
+                <Field name="powerstats.power" component={StatInput} />
+                <Field name="powerstats.combat" component={StatInput} />
+              </div>
+            </fieldset>
+
+            {serverError && <div className="text-red-500 text-center">{serverError}</div>}
+
+            <button type="submit" disabled={isSubmitting} className="w-full bg-green-600 text-white p-3 rounded-md font-bold hover:bg-green-700 disabled:bg-gray-400">
+              {isSubmitting ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
+            </button>
+          </Form>
+        )}
+      </Formik>
+    </div>
+  );
+};
+
+export default EditHero;
