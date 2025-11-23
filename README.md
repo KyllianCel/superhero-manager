@@ -6,7 +6,7 @@ Une application Full-Stack pour gérer une base de données de super-héros, dé
 
 Prérequis : Node.js et MongoDB installés sur votre machine.
 
-# 1. Installation des dépendances
+## 1. Installation des dépendances
 
 À la racine du projet, installez les dépendances pour le backend et le frontend :
 
@@ -22,7 +22,7 @@ cd ../frontend
 npm install
 ```
 
-# 2. Configuration
+## 2. Configuration
 
 Créez un fichier .env dans le dossier backend/ avec les variables suivantes :
 ```
@@ -35,7 +35,7 @@ JWT_SECRET=votre_super_secret_jwt
 
 Pour remplir la base de données avec les 500+ héros initiaux :
 
-# Depuis le dossier backend
+## Depuis le dossier backend
 ```
 npx ts-node src/utils/seedDatabase.ts
 ```
