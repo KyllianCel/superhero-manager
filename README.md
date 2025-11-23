@@ -1,8 +1,8 @@
-#🦸‍♂️ SuperHero Manager
+# 🦸‍♂️ SuperHero Manager
 
 Une application Full-Stack pour gérer une base de données de super-héros, développée avec la stack MERN (MongoDB, Express, React, Node.js) et TypeScript.
 
-#🛠️ Installation et Démarrage
+# 🛠️ Installation et Démarrage
 
 Prérequis : Node.js et MongoDB installés sur votre machine.
 
